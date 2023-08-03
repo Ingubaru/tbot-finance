@@ -22,6 +22,7 @@ ACCESS_ID = [int(user_id) for user_id in os.getenv("TELEGRAM_ACCESS_ID").split('
 
 
 logging.basicConfig(level=logging.INFO)
+logging.info(ACCESS_ID)
 
 
 bot = Bot(token=TELEGRAM_API_TOKEN)
