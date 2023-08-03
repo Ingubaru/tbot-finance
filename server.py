@@ -18,7 +18,7 @@ from utils import parse_expence_message
 
 
 TELEGRAM_API_TOKEN = os.getenv("TELEGRAM_API_TOKEN")
-ACCESS_ID = int(os.getenv("TELEGRAM_ACCESS_ID"))
+ACCESS_ID = [int(user_id) for user_id in os.getenv("TELEGRAM_ACCESS_ID").split(';')]
 
 
 logging.basicConfig(level=logging.INFO)
