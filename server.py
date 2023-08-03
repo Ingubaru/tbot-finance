@@ -4,6 +4,7 @@ import exceptions
 import db
 import os
 import expenses
+from dotenv import load_dotenv
 from expenses import Expense
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher import FSMContext
@@ -15,6 +16,9 @@ from utils import parse_expence_message
 
 # TODO: Remove
 # import plotly.graph_objects as go
+
+
+load_dotenv()
 
 
 TELEGRAM_API_TOKEN = os.getenv("TELEGRAM_API_TOKEN")
