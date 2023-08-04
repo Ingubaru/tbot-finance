@@ -15,6 +15,7 @@ import expenses
 from expenses import Expense
 from middlewares import AccessMiddleware
 
+
 load_dotenv()
 
 
@@ -39,7 +40,6 @@ async def setup_bot_commands(dispatcher):
         types.BotCommand(command="/month", description="Траты за месяц"),
         types.BotCommand(command="/year", description="Статистика за год"),
         types.BotCommand(command="/prev_month", description="Траты за предыдущий месяц"),
-        types.BotCommand(command="/prev_year", description="Траты за предыдущий год"),
         types.BotCommand(command="/help", description="Справка")
     ]
     await dispatcher.bot.set_my_commands(bot_commands)

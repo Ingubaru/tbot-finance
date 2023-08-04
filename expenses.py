@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import numpy as np
-from typing import List, NamedTuple, Optional, Dict
+from typing import List, NamedTuple, Optional
 
 import plotly.graph_objects as go
 import pytz
@@ -94,19 +94,34 @@ def format_expenses(expenses: List[Expense]) -> str:
 def get_statistic_graph(expenses: List[Expense]) -> str:
     """
     Create PNG file with pie diagram of expenses
-    :return: path to static file
+    :return: path to static PNG file
     """
-    month = expenses[0].created[5:7]
+    month_year = expenses[0].created[5:7] + '.' + expenses[0].created[:4]
     categories = set([expense.category for expense in expenses])
     categories = list(categories)
     values = []
     for c in categories:
         values.append(np.sum([e.amount if e.category == c else 0 for e in expenses]))
-    graph = go.Figure(data=[go.Pie(values=values,
-                                   labels=categories,
-                                   textinfo='label+value',
-                                   hole=.3)])
-    filepath = os.path.join(config.STATIC_PATH, 'month' + month + '.png')
+    total = np.sum(values)
+    graph = go.Figure(data=[go.Pie(
+        values=values,
+        labels=categories,
+        textinfo='label+value',
+        hole=.35)]
+    )
+    graph.add_annotation(dict(
+        font=dict(color='black', size=48),
+        text=month_year,
+        showarrow=False,
+        x=-0.1,
+        y=1.1
+    ))
+    graph.add_annotation(dict(
+        font=dict(color='black', size=36),
+        text=str(total),
+        showarrow=False,
+    ))
+    filepath = os.path.join(config.STATIC_PATH, 'month.' + month_year + '.png')
     graph.write_image(filepath, width=768, height=768)
     return filepath
 
