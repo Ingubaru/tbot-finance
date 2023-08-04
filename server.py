@@ -1,17 +1,19 @@
 import logging
-import config
-import exceptions
-import db
+import kaleido
 import os
-import expenses
-from dotenv import load_dotenv
-from expenses import Expense
+
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from middlewares import AccessMiddleware
+from dotenv import load_dotenv
 
+import config
+import db
+import exceptions
+import expenses
+from expenses import Expense
+from middlewares import AccessMiddleware
 
 load_dotenv()
 
@@ -119,7 +121,7 @@ async def add_expense(message: types.Message, state: FSMContext):
     category_kb.add(*config.CATEGORIES)
 
     category_msg = await message.reply(f'Укажите категорию', reply_markup=category_kb)
-    await state.update_data(msg_id=category_msg.message_id)
+    await state.update_data(msg_id_for_remove=category_msg.message_id)
     await ExpenceState.category.set()
 
 
@@ -131,7 +133,7 @@ async def select_group(message: types.Message, state: FSMContext):
     comment = data['comment']
     category = data['category']
     from_user = data['from_user']
-    msg_id = data['msg_id']
+    msg_id_for_remove = data['msg_id_for_remove']
     expense = Expense(
         id=None,
         amount=amount,
@@ -150,7 +152,7 @@ async def select_group(message: types.Message, state: FSMContext):
     )
     await bot.delete_message(
         chat_id=message.from_user.id,
-        message_id=msg_id
+        message_id=msg_id_for_remove
     )
     await bot.delete_message(
         chat_id=message.from_user.id,
