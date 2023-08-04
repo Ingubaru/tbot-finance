@@ -2,6 +2,8 @@ import datetime
 import logging
 import os
 import re
+
+import numpy
 import numpy as np
 from typing import List, NamedTuple, Optional
 
@@ -78,15 +80,14 @@ def get_expenses_prev(period: str) -> List[Expense]:
 
 def format_expenses(expenses: List[Expense]) -> str:
     sum_expenses = 0
-    expenses_str = '{:1.1} {:>5.5} {:<15.15} {:>5.5}\n'.format('', 'ID', 'КОММЕНТАРИЙ', 'СУММА')
+    expenses_str = '{:<5.5} {:<17.17} {:>5.5}\n'.format('ID', 'КОММЕНТАРИЙ', 'СУММА')
     for expense in expenses:
         sum_expenses += expense.amount
-        expenses_str += "{} {:>5.5} {:<15.15} {:>5d}\n".format(
-            expense.from_user.split()[0][0],
-            '' + str(expense.id) + '',
+        expenses_str += "{:<5.5} {:<17.17} {:>5d}\n".format(
+            str(expense.id),
             expense.comment if expense.comment != '' else expense.category,
             expense.amount)
-    expenses_str += "\n{:7.7} {:<14.14} {:>6d}\n".format('', 'ИТОГО', sum_expenses)
+    expenses_str += "\n{:5.5} {:<16.16} {:>6d}\n".format('', 'ИТОГО', sum_expenses)
     expenses_str = '<pre>' + expenses_str + '</pre>'
     return expenses_str
 
