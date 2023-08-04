@@ -1,5 +1,6 @@
 TIMEZONE = 'Asia/Omsk'
-DB_NAME = 'finance.db'
+DB_PATH = './db/finance.db'
+STATIC_PATH = './static/'
 CATEGORIES = [
     'Авто',
     'Продукты',

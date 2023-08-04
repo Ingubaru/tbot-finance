@@ -4,7 +4,8 @@ import sqlite3
 import config
 from typing import Dict, List
 
-db = sqlite3.connect(os.path.join("db", config.DB_NAME))
+
+db = sqlite3.connect(os.path.join(config.DB_PATH))
 cursor = db.cursor()
 
 
@@ -79,9 +80,10 @@ def _init_db():
     cursor.execute('CREATE TABLE expenses('
                    'id INTEGER PRIMARY KEY,'
                    'amount INTEGER,'
-                   'created datetime,'
+                   'created DATETIME,'
                    'category INTEGER,'
-                   'comment text,'
+                   'comment TEXT,'
+                   'from_user TEXT,'
                    'FOREIGN KEY(category) REFERENCES categories(name)'
                    ');')
     # Insert in 'categories' table categories from settings
