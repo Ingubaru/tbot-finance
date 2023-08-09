@@ -129,7 +129,7 @@ async def add_expense(message: types.Message, state: FSMContext):
     category_kb = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True, row_width=3)
     category_kb.add(*config.CATEGORIES)
 
-    category_msg = await message.reply(f'Укажите категорию', reply_markup=keyboards.category_kb)
+    category_msg = await message.reply(f'Укажите категорию', reply_markup=category_kb)
     await state.update_data(msg_id_for_remove=category_msg.message_id)
     await ExpenceState.get_category.set()
 
