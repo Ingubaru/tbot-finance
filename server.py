@@ -12,7 +12,6 @@ import config
 import db
 import exceptions
 import expenses
-import keyboards
 from expenses import Expense
 from middlewares import AccessMiddleware
 
