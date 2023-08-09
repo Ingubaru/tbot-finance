@@ -3,7 +3,8 @@ import logging
 import os
 import re
 
-import numpy
+import pandas as pd
+import openpyxl
 import numpy as np
 from typing import List, NamedTuple, Optional
 
@@ -61,6 +62,18 @@ def get_expenses(period: str) -> List[Expense]:
     return result
 
 
+def get_expense_by_id(row_id: int) -> Expense | None:
+    cursor = db.get_cursor()
+    cursor.execute(f'SELECT id, amount, category, comment, from_user, created '
+                   f'FROM expenses '
+                   f'WHERE ID={row_id} ')
+    row = cursor.fetchone()
+    if not row:
+        return None
+    result = Expense(id=row[0], amount=row[1], category=row[2], comment=row[3], from_user=row[4], created=row[5])
+    return result
+
+
 def get_expenses_prev(period: str) -> List[Expense]:
     """
     Returns the previous month's expenses
@@ -92,12 +105,11 @@ def format_expenses(expenses: List[Expense]) -> str:
     return expenses_str
 
 
-def get_statistic_graph(expenses: List[Expense]) -> str:
+def to_statistic_graph(expenses: List[Expense], filename: str = '') -> str:
     """
     Create PNG file with pie diagram of expenses
     :return: path to static PNG file
     """
-    month_year = expenses[0].created[5:7] + '.' + expenses[0].created[:4]
     categories = set([expense.category for expense in expenses])
     categories = list(categories)
     values = []
@@ -112,7 +124,7 @@ def get_statistic_graph(expenses: List[Expense]) -> str:
     )
     graph.add_annotation(dict(
         font=dict(color='black', size=48),
-        text=month_year,
+        text=filename,
         showarrow=False,
         x=-0.1,
         y=1.1
@@ -122,8 +134,19 @@ def get_statistic_graph(expenses: List[Expense]) -> str:
         text=str(total),
         showarrow=False,
     ))
-    filepath = os.path.join(config.STATIC_PATH, 'month.' + month_year + '.png')
+    filepath = os.path.join(config.STATIC_PATH, filename + '.png')
     graph.write_image(filepath, width=768, height=768)
+    return filepath
+
+
+def to_excel(expenses: List[Expense], filename: str) -> str:
+    """
+    Create EXCEL file with expenses
+    :return: path to static EXCEL file
+    """
+    df = pd.DataFrame(expenses)
+    filepath = os.path.join(config.STATIC_PATH, filename + '.xlsx')
+    df.to_excel(filepath)
     return filepath
 
 

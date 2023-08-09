@@ -12,16 +12,15 @@ import config
 import db
 import exceptions
 import expenses
+import keyboards
 from expenses import Expense
 from middlewares import AccessMiddleware
 
 
 load_dotenv()
 
-
 TELEGRAM_API_TOKEN = os.getenv("TELEGRAM_API_TOKEN")
 ACCESS_ID = [int(user_id) for user_id in os.getenv("TELEGRAM_ACCESS_ID").split(';')]
-
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TELEGRAM_API_TOKEN)
@@ -30,8 +29,7 @@ dp.middleware.setup(AccessMiddleware(ACCESS_ID))
 
 
 class ExpenceState(StatesGroup):
-    amount = State()
-    category = State()
+    get_category = State()
 
 
 async def setup_bot_commands(dispatcher):
@@ -39,7 +37,6 @@ async def setup_bot_commands(dispatcher):
         types.BotCommand(command="/today", description="Траты за сегодня"),
         types.BotCommand(command="/month", description="Траты за месяц"),
         types.BotCommand(command="/year", description="Статистика за год"),
-        types.BotCommand(command="/prev_month", description="Траты за предыдущий месяц"),
         types.BotCommand(command="/help", description="Справка")
     ]
     await dispatcher.bot.set_my_commands(bot_commands)
@@ -55,10 +52,18 @@ async def send_welcome(message: types.Message):
 @dp.message_handler(commands=['del'])
 async def delete_expense(message: types.Message):
     """Удаляет одну запись о расходе по её идентификатору"""
-    row_id = int(message.text[5:])
+    row_id = int(message.text[4:])
+    expense = expenses.get_expense_by_id(row_id)
+    if not expense:
+        await message.answer('Записи с таким ID не существует')
+        return
     expenses.delete_expense(row_id)
-    answer_message = "Удалил"
-    await message.answer(answer_message)
+    answer_message = '<pre>{:<5.5} {:<17.17} {:>5.5}</pre>\nЗапись удалена'.format(
+        str(expense.id),
+        expense.comment,
+        str(expense.amount)
+    )
+    await message.answer(answer_message, parse_mode='HTML')
 
 
 @dp.message_handler(commands=['today'])
@@ -76,32 +81,37 @@ async def get_month_expenses(message: types.Message):
     if not month_expenses:
         await bot.send_message(message.from_user.id, 'В этом месяце нет трат')
         return
-    graph = open(expenses.get_statistic_graph(month_expenses), 'rb')
-    await bot.send_message(message.from_user.id, expenses.format_expenses(month_expenses), parse_mode='HTML')
+    filename = month_expenses[0].created[5:7] + '.' + month_expenses[0].created[:4]
+    graph = open(expenses.to_statistic_graph(month_expenses, filename), 'rb')
+    sheet = open(expenses.to_excel(month_expenses, filename), 'rb')
     await bot.send_photo(message.from_user.id, graph)
+    await bot.send_document(message.from_user.id, sheet)
 
 
 @dp.message_handler(commands=['prev_month'])
-async def get_month_expenses(message: types.Message):
+async def get_prev_month_expenses(message: types.Message):
     prev_month_expenses = expenses.get_expenses_prev('month')
     if not prev_month_expenses:
         await bot.send_message(message.from_user.id, 'В предыдущем месяце нет трат')
         return
-    graph = open(expenses.get_statistic_graph(prev_month_expenses), 'rb')
-    await bot.send_message(message.from_user.id, expenses.format_expenses(prev_month_expenses), parse_mode='HTML')
+    filename = prev_month_expenses[0].created[5:7] + '.' + prev_month_expenses[0].created[:4]
+    graph = open(expenses.to_statistic_graph(prev_month_expenses, filename), 'rb')
+    sheet = open(expenses.to_excel(prev_month_expenses, filename), 'rb')
     await bot.send_photo(message.from_user.id, graph)
+    await bot.send_document(message.from_user.id, sheet)
 
 
 @dp.message_handler(commands=['year'])
 async def get_year_expenses(message: types.Message):
     year_expenses = expenses.get_expenses('year')
     if not year_expenses:
-        await bot.send_message(message.from_user.id, 'В этом месяце нет трат')
+        await bot.send_message(message.from_user.id, 'В этом году нет трат')
         return
-    graph = open(expenses.get_statistic_graph(year_expenses), 'rb')
-    await bot.send_message(message.from_user.id, expenses.format_expenses(year_expenses),
-                           parse_mode='HTML')
+    filename = year_expenses[0].created[:4]
+    graph = open(expenses.to_statistic_graph(year_expenses, filename), 'rb')
+    sheet = open(expenses.to_excel(year_expenses, filename), 'rb')
     await bot.send_photo(message.from_user.id, graph)
+    await bot.send_document(message.from_user.id, sheet)
 
 
 @dp.message_handler()
@@ -120,12 +130,12 @@ async def add_expense(message: types.Message, state: FSMContext):
     category_kb = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True, row_width=3)
     category_kb.add(*config.CATEGORIES)
 
-    category_msg = await message.reply(f'Укажите категорию', reply_markup=category_kb)
+    category_msg = await message.reply(f'Укажите категорию', reply_markup=keyboards.category_kb)
     await state.update_data(msg_id_for_remove=category_msg.message_id)
-    await ExpenceState.category.set()
+    await ExpenceState.get_category.set()
 
 
-@dp.message_handler(state=ExpenceState.category)
+@dp.message_handler(state=ExpenceState.get_category)
 async def select_group(message: types.Message, state: FSMContext):
     await state.update_data(category=message.text)
     data = await state.get_data()
