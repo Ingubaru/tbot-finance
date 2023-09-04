@@ -8,13 +8,13 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
 from dotenv import load_dotenv
 
+import categories
 import config
 import db
 import exceptions
 import expenses
 from expenses import Expense
 from middlewares import AccessMiddleware
-
 
 load_dotenv()
 
@@ -27,16 +27,17 @@ dp = Dispatcher(bot, storage=MemoryStorage())
 dp.middleware.setup(AccessMiddleware(ACCESS_ID))
 
 
-class ExpenceState(StatesGroup):
+class BotState(StatesGroup):
     get_category = State()
 
 
 async def setup_bot_commands(dispatcher):
     bot_commands = [
-        types.BotCommand(command="/today", description="Траты за сегодня"),
-        types.BotCommand(command="/month", description="Траты за месяц"),
-        types.BotCommand(command="/year", description="Статистика за год"),
-        types.BotCommand(command="/help", description="Справка")
+        types.BotCommand(command="/today",  description="Траты за сегодня"),
+        types.BotCommand(command="/month",  description="Траты за месяц"),
+        types.BotCommand(command="/year",   description="Статистика за год"),
+        types.BotCommand(command="/limits", description="Лимиты по категориям"),
+        types.BotCommand(command="/help",   description="Справка")
     ]
     await dispatcher.bot.set_my_commands(bot_commands)
 
@@ -113,6 +114,37 @@ async def get_year_expenses(message: types.Message):
     await bot.send_document(message.from_user.id, sheet)
 
 
+@dp.message_handler(commands=['limits'])
+async def get_category_limits(message: types.Message):
+    categories_limits = categories.get_categories()
+    limits_str = '{:<10.10} {:>6.6}\n'.format('КАТЕГОРИЯ', 'ЛИМИТ')
+    for category_limit in categories_limits:
+        limits_str += '{:<10.10} {:>6.6}\n'.format(
+            category_limit.name,
+            str(category_limit.monthly_limit) if category_limit.monthly_limit else '-')
+    limits_str = '<pre>' + limits_str + '</pre>'
+    await bot.send_message(message.from_user.id, limits_str, parse_mode='HTML')
+
+
+@dp.message_handler(commands=['set_limit'])
+async def set_category_limit(message: types.Message):
+    """Добавляет лимит для категории"""
+    message_text = message.text[10:]
+    name = message_text.split()[0]
+    limit = int(message_text.split()[1])
+    category = categories.get_category(name)
+    if not category:
+        await message.answer('Категории с таким именем не существует')
+        return
+    categories.set_category_limit(name, limit)
+    category_limit = categories.get_category(name)
+    answer_message = '<pre>ЛИМИТ ДОБАВЛЕН:\n{} {}\n</pre>'.format(
+        category_limit.name,
+        str(category_limit.monthly_limit)
+    )
+    await message.answer(answer_message, parse_mode='HTML')
+
+
 @dp.message_handler()
 async def add_expense(message: types.Message, state: FSMContext):
     try:
@@ -131,10 +163,10 @@ async def add_expense(message: types.Message, state: FSMContext):
 
     category_msg = await message.reply(f'Укажите категорию', reply_markup=category_kb)
     await state.update_data(msg_id_for_remove=category_msg.message_id)
-    await ExpenceState.get_category.set()
+    await BotState.get_category.set()
 
 
-@dp.message_handler(state=ExpenceState.get_category)
+@dp.message_handler(state=BotState.get_category)
 async def select_group(message: types.Message, state: FSMContext):
     await state.update_data(category=message.text)
     data = await state.get_data()
